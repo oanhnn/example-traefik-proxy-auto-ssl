@@ -1,62 +1,61 @@
 version: "3.5"
 
-### Networks ###
 networks:
-  pub-network: {}
-  pri-network:
+  proxy-net:
     name: reverse-proxy
 
-### Secrets ###
 secrets:
   namesilo_api_key:
     file: ./secrets/namesilo_api_key.secret
 
-### Volumes ###
 volumes:
   letsencrypt: {}
 
-### Services ###
 services:
-  # Reverse proxy
   proxy:
     image: traefik:v2.0
     command:
       - "--api.dashboard=true"
+      - "--api.insecure=true"
+      # - "--certificatesresolvers.namesilo.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.namesilo.acme.dnschallenge=true"
+      - "--certificatesresolvers.namesilo.acme.dnschallenge.provider=namesilo"
+      - "--certificatesresolvers.namesilo.acme.email=admin@${DOMAIN:-emaple.com}"
+      - "--certificatesresolvers.namesilo.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--entrypoints.traefik.address=:8080"
+      # - "--log.level=DEBUG"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entryPoint=traefik"
       - "--providers.docker=true"
       - "--providers.docker.network=reverse-proxy"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.http.address=:80"
-      - "--entrypoints.https.address=:443"
-      - "--entrypoints.metrics.address=:8082"
-      - "--certificatesresolvers.mydnschallenge.acme.email=admin@example.com"
-      - "--certificatesresolvers.mydnschallenge.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.mydnschallenge.acme.dnschallenge=true"
-      - "--certificatesresolvers.mydnschallenge.acme.dnschallenge.provider=namesilo"
-      # - "--certificatesresolvers.mydnschallenge.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-      # - "--log.level=DEBUG"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entryPoint=metrics"
     environment:
       NAMESILO_API_KEY_FILE: /run/secrets/namesilo_api_key
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`proxy.example.com`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
-      - "traefik.http.routers.api.entrypoints=http"
-      - "traefik.http.routers.api.service=api@internal"
-      - "traefik.http.routers.api.middlewares=secured"
-      - "traefik.http.routers.api.tls.certresolver=mydnschallenge"
-      - "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
+      - "traefik.http.routers.any-http.entrypoints=http"
+      - "traefik.http.routers.any-http.rule=HostRegexp(`{any:.*}`)"
+      - "traefik.http.routers.any-http.middlewares=https-only"
+      - "traefik.http.routers.any-http.service=api@internal"
+      - "traefik.http.routers.proxy.entrypoints=https"
+      - "traefik.http.routers.proxy.rule=Host(`proxy.${DOMAIN:-emaple.com}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.proxy.middlewares=secured"
+      - "traefik.http.routers.proxy.service=api@internal"
+      - "traefik.http.routers.proxy.tls.certresolver=namesilo"
+      - "traefik.http.routers.proxy.tls.domains[0].main=${DOMAIN:-emaple.com}"
+      - "traefik.http.routers.proxy.tls.domains[0].sans=*.${DOMAIN:-emaple.com}"
+      - "traefik.http.middlewares.secured.chain.middlewares=known-ips,auth-users"
       - "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.0.1/24,127.0.0.1/32"
+      - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=127.0.0.0/8,10.0.0.0/8,192.168.0.0/16,172.16.0.0/16"
       - "traefik.http.middlewares.auth-users.basicauth.realm=Admin"
       - "traefik.http.middlewares.auth-users.basicauth.users=test:$$apr1$$bLaRU9Rq$$n/9/kkrM54oF0Lsai7hYn0"
     networks:
-      - pub-network
-      - pri-network
+      - proxy-net
     ports:
       - 80:80
       - 443:443
-      - 8082:8082
     secrets:
       - namesilo_api_key
     volumes:
