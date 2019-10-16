@@ -17,11 +17,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.webapp.rule=Host(`example.com`)"
-      # - "traefik.http.routers.webapp.entrypoints=https"
       - "traefik.http.routers.webapp.entrypoints=https"
-      - "traefik.http.routers.webapp.tls.certresolver=mydnschallenge"
-      - "traefik.http.routers.webapp.middlewares=https-only"
-      # - "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
+      - "traefik.http.routers.webapp.tls.certresolver=namesilo"
+      - "traefik.http.routers.webapp.tls.domains[0].main=emaple.com}"
+      - "traefik.http.routers.webapp.tls.domains[0].sans=*.emaple.com}"
+      - "traefik.http.services.webapp.loadbalancer.server.port=80"
     networks:
       - app-network
       - pri-network
