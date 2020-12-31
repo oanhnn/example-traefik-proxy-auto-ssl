@@ -1,0 +1,38 @@
+# =========================================
+# Whoami
+# Verion latest
+# Requires:
+# - Docker Engine 17.12.0+
+# - Docker Compose 1.18.0+
+# - Docker Swarm mode
+# =========================================
+
+# Docker compose syntax version
+version: "3.5"
+
+# Registration networks
+networks:
+  reverse-proxy:
+    name: reverse-proxy
+    external: true
+
+# Registration services
+services:
+  whoami:
+    image: traefik/whoami
+    deploy:
+      labels:
+        # Enable Traefik for this service
+        - traefik.enable=true
+        - traefik.constraint-label=traefik-public
+        # Routing
+        - traefik.http.routers.whoami.entrypoints=websecure
+        - traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN:?Variable not set}`)
+        - traefik.http.routers.whoami.middlewares=admin-auth
+        - traefik.http.routers.whoami.service=whoami-svc
+        - traefik.http.routers.whoami.tls=true
+        - traefik.http.routers.whoami.tls.certresolver=le
+        - traefik.http.routers.whoami.priority=10
+        - traefik.http.services.whoami-svc.loadbalancer.server.port=80
+    networks:
+      - reverse-proxy
