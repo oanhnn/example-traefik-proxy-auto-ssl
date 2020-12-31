@@ -51,7 +51,7 @@ An example for setting auto proxy and auto setup SSL with Traefik 2
   $ curl -H "Host: app.example.com" https://127.0.0.1/
   ```
 
-- Traefik dashboard was lauch in URL https://proxy.example.com/dashboard and secured with basic authentication and whilelist IP
+- Traefik dashboard was lauch in URL https://traefik.example.com/dashboard and secured with basic authentication and whilelist IP
 
 > **NOTE** You can use `setup.sh` script in `docker-compose` and `docker-swarm` for easier
 
